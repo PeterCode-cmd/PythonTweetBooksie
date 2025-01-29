@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wpisy użytkownika</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .entry-content {
+            font-size: 1.25rem;  /* Zwiększona czcionka dla głównego posta */
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .entry-card {
+            border: 2px solid #ddd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+        }
+
+        .comment-form {
+            margin-top: 20px;
+        }
+
+        .comment {
+            background-color: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .comment .username {
+            font-weight: bold;
+        }
+
+        .comments-container {
+            display: none; /* Ukryte na początku */
+            margin-top: 20px;
+        }
+
+        .show-comments-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .show-comments-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Wszystkie wpisy</h1>
+
+        <a href="{{ url_for('logout') }}" class="btn btn-danger mb-3">Wyloguj się</a>
+        <a href="{{ url_for('add_entry') }}" class="btn btn-primary mb-3">Dodaj nowy wpis</a>
+        <hr>
+
+        <!-- Sekcja dla wpisów użytkownika -->
+        <h2>Twoje wpisy</h2>
+        {% for entry in entries if entry.user.id == session['user_id'] %}
+        <div class="card mt-3 entry-card">
+            <div class="card-body">
+                <p class="entry-content">{{ entry.content }}</p>
+               <small>Autor: <a href="{{ url_for('user_profile', username=entry.user.username) }}">{{ entry.user.username }}</a></small>
+                
+                <div class="mt-2">
+                    <a href="{{ url_for('edit_entry', entry_id=entry.id) }}" class="btn btn-warning btn-sm">Edytuj</a>
+                    <form action="{{ url_for('delete_entry', entry_id=entry.id) }}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-danger btn-sm">Usuń</button>
+                    </form>
+                </div>
+                
+                <hr>
+
+                <!-- Formularz dodawania komentarza -->
+                <h5>Komentarze</h5>
+                <form action="{{ url_for('add_comment', entry_id=entry.id) }}" method="post" class="comment-form">
+                    <div class="mb-3">
+                        <textarea class="form-control" name="content" rows="3" placeholder="Dodaj komentarz..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Dodaj komentarz</button>
+                </form>
+
+                <!-- Wyświetlanie komentarzy -->
+                {% if entry.comments %}
+                    <div class="comments-container" id="comments-{{ entry.id }}">
+                        {% for comment in entry.comments %}
+                            <div class="comment">
+                                <p><span class="username">{{ comment.user.username }}:</span> {{ comment.content }} <small class="text-muted">- {{ comment.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small></p>
+                                
+                                <!-- Sprawdzamy, czy użytkownik jest autorem komentarza lub właścicielem posta -->
+                                {% if comment.user.id == session['user_id'] or entry.user.id == session['user_id'] %}
+                                    <form action="{{ url_for('delete_comment', comment_id=comment.id) }}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-danger btn-sm">Usuń</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button class="show-comments-btn" onclick="toggleComments({{ entry.id }})">Pokaż/Zwiń komentarze</button>
+                {% else %}
+                    <p>Brak komentarzy.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <p>Nie masz jeszcze żadnych wpisów.</p>
+        {% endfor %}
+
+        <!-- Sekcja dla wpisów innych użytkowników -->
+        <h2>Wpisy innych użytkowników</h2>
+        {% for entry in entries if entry.user.id != session['user_id'] %}
+        <div class="card mt-3 entry-card">
+            <div class="card-body">
+                <p class="entry-content">{{ entry.content }}</p>
+                <small>Autor: <a href="{{ url_for('user_profile', username=entry.user.username) }}">{{ entry.user.username }}</a></small>
+                
+                <hr>
+
+                <!-- Formularz dodawania komentarza -->
+                <h5>Komentarze</h5>
+                <form action="{{ url_for('add_comment', entry_id=entry.id) }}" method="post" class="comment-form">
+                    <div class="mb-3">
+                        <textarea class="form-control" name="content" rows="3" placeholder="Dodaj komentarz..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Dodaj komentarz</button>
+                </form>
+
+                <!-- Wyświetlanie komentarzy -->
+                {% if entry.comments %}
+                    <div class="comments-container" id="comments-{{ entry.id }}">
+                        {% for comment in entry.comments %}
+                            <div class="comment">
+                                <p><span class="username">{{ comment.user.username }}:</span> {{ comment.content }} <small class="text-muted">- {{ comment.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</small></p>
+                                
+                                <!-- Sprawdzamy, czy użytkownik jest autorem komentarza lub właścicielem posta -->
+                                {% if comment.user.id == session['user_id'] or entry.user.id == session['user_id'] %}
+                                    <form action="{{ url_for('delete_comment', comment_id=comment.id) }}" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-danger btn-sm">Usuń</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button class="show-comments-btn" onclick="toggleComments({{ entry.id }})">Pokaż/Zwiń komentarze</button>
+                {% else %}
+                    <p>Brak komentarzy.</p>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <p>Brak wpisów innych użytkowników.</p>
+        {% endfor %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+    <script>
+    function toggleComments(entryId) {
+        var commentsSection = document.getElementById("comments-" + entryId);
+
+        if (commentsSection.style.display === "none" || commentsSection.style.display === "") {
+            commentsSection.style.display = "block"; // Pokaż sekcję komentarzy
+        } else {
+            commentsSection.style.display = "none"; // Ukryj sekcję komentarzy
+        }
+    }
+</script>
+</body>
+</html>
